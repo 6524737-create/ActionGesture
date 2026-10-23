@@ -5,8 +5,7 @@ on:
 
 jobs:
   build:
-    name: Build on macOS
-    runs-on: macos-latest
+    runs-on: macos-14
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -19,7 +18,7 @@ jobs:
           echo "THEOS=~/theos" >> $GITHUB_ENV
           echo "$HOME/theos/bin" >> $GITHUB_PATH
 
-      - name: Setup iOS SDK & Mock RootHide Header
+      - name: Setup iOS SDK & Mock RootHide
         run: |
           rm -rf ~/theos/sdks
           git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/theos/sdks.git ~/theos/sdks
@@ -28,7 +27,7 @@ jobs:
           git checkout
           rm -rf .git
           
-          # 创建纯宏定义的 roothide.h，不引入任何冲突的方法签名
+          # 注入纯宏定义的 roothide.h，不报符号冲突
           cat << 'EOF' > ~/theos/include/roothide.h
           #pragma once
           #define jbroot(path) path
