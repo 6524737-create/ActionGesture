@@ -5,7 +5,11 @@ on:
 
 jobs:
   build:
-    runs-on: macos-13
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-13, macos-14, macos-15]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -31,12 +35,41 @@ jobs:
           git checkout
           rm -rf .git
           
-          # 让 jbroot 自动附带 /var/jb 前缀，正确识别无根路径
+          # 注入类型安全、同时兼容 ObjC 与 C 字符串的 roothide.h
           cat << 'EOF' > ~/theos/include/roothide.h
           #pragma once
+          #include <stdlib.h>
+          #include <string.h>
+
+          #ifdef __OBJC__
           #import <Foundation/Foundation.h>
-          #define jbroot(path) [@"/var/jb" stringByAppendingPathComponent:(path)]
-          #define rootfs(path) path
+
+          static inline __attribute__((overloadable)) NSString *jbroot(NSString *path) {
+              if (!path) return nil;
+              if ([path hasPrefix:@"/var/jb"]) return path;
+              if ([path hasPrefix:@"/"]) return [@"/var/jb" stringByAppendingString:path];
+              return [NSString stringWithFormat:@"/var/jb/%@", path];
+          }
+
+          static inline __attribute__((overloadable)) NSString *rootfs(NSString *path) {
+              return path;
+          }
+          #endif
+
+          static inline __attribute__((overloadable)) const char *jbroot(const char *path) {
+              if (!path) return NULL;
+              if (strncmp(path, "/var/jb", 7) == 0) return path;
+              __thread static char buf[1024];
+              snprintf(buf, sizeof(buf), "/var/jb%s%s", (path[0] == '/' ? "" : "/"), path);
+              return buf;
+          }
+
+          static inline __attribute__((overloadable)) const char *rootfs(const char *path) {
+              return path;
+          }
+
+          #define jbroot jbroot
+          #define rootfs rootfs
           EOF
 
       - name: Compile Rootless Package
@@ -47,5 +80,5 @@ jobs:
       - name: Upload Output Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ActionGesture-Rootless-deb
+          name: ActionGesture-Rootless-deb-${{ matrix.os }}
           path: packages/*.deb
