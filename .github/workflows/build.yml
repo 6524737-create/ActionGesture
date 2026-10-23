@@ -4,8 +4,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: macos-15
+  # 任务 1：macOS 原生编译（100% 稳定兼容）
+  build-macos:
+    name: Build on macOS
+    runs-on: macos-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -26,8 +28,6 @@ jobs:
           git sparse-checkout set --no-cone iPhoneOS16.5.sdk
           git checkout
           rm -rf .git
-          
-          # 下载缺失的 roothide.h 头文件
           curl -sLo ~/theos/include/roothide.h https://raw.githubusercontent.com/RootHide/roothide-theos/master/include/roothide.h
 
       - name: Compile Rootless Package
@@ -37,5 +37,37 @@ jobs:
       - name: Upload Output Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ActionGesture-Rootless-deb
+          name: ActionGesture-Rootless-macOS
+          path: packages/*.deb
+
+  # 任务 2：Linux 极速容器编译（无需排队，秒开）
+  build-linux:
+    name: Build on Linux Docker
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/kabiroberai/theos-ci:latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup iOS SDK & RootHide Header
+        run: |
+          git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/theos/sdks.git $THEOS/sdks-tmp
+          cd $THEOS/sdks-tmp
+          git sparse-checkout set --no-cone iPhoneOS16.5.sdk
+          git checkout
+          mv iPhoneOS16.5.sdk $THEOS/sdks/
+          rm -rf $THEOS/sdks-tmp
+          curl -sLo $THEOS/include/roothide.h https://raw.githubusercontent.com/RootHide/roothide-theos/master/include/roothide.h
+
+      - name: Compile Rootless Package
+        run: |
+          make package SCHEME=rootless FINALPACKAGE=1
+
+      - name: Upload Output Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ActionGesture-Rootless-Linux
           path: packages/*.deb
