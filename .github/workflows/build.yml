@@ -20,6 +20,7 @@ jobs:
 
       - name: Setup iOS SDK
         run: |
+          rm -rf ~/theos/sdks
           git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/theos/sdks.git ~/theos/sdks
           cd ~/theos/sdks
           git sparse-checkout set --no-cone iPhoneOS16.5.sdk
