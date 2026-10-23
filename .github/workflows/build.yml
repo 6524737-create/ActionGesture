@@ -4,8 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # 任务 1：macOS 原生编译（100% 稳定兼容）
-  build-macos:
+  build:
     name: Build on macOS
     runs-on: macos-latest
     steps:
@@ -20,7 +19,7 @@ jobs:
           echo "THEOS=~/theos" >> $GITHUB_ENV
           echo "$HOME/theos/bin" >> $GITHUB_PATH
 
-      - name: Setup iOS SDK & RootHide Header
+      - name: Setup iOS SDK & Mock RootHide Header
         run: |
           rm -rf ~/theos/sdks
           git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/theos/sdks.git ~/theos/sdks
@@ -28,46 +27,21 @@ jobs:
           git sparse-checkout set --no-cone iPhoneOS16.5.sdk
           git checkout
           rm -rf .git
-          curl -sLo ~/theos/include/roothide.h https://raw.githubusercontent.com/RootHide/roothide-theos/master/include/roothide.h
+          
+          # 创建纯宏定义的 roothide.h，不引入任何冲突的方法签名
+          cat << 'EOF' > ~/theos/include/roothide.h
+          #pragma once
+          #define jbroot(path) path
+          #define rootfs(path) path
+          EOF
 
       - name: Compile Rootless Package
         run: |
+          make clean
           make package SCHEME=rootless FINALPACKAGE=1
 
       - name: Upload Output Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ActionGesture-Rootless-macOS
-          path: packages/*.deb
-
-  # 任务 2：Linux 极速容器编译（无需排队，秒开）
-  build-linux:
-    name: Build on Linux Docker
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/kabiroberai/theos-ci:latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Setup iOS SDK & RootHide Header
-        run: |
-          git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/theos/sdks.git $THEOS/sdks-tmp
-          cd $THEOS/sdks-tmp
-          git sparse-checkout set --no-cone iPhoneOS16.5.sdk
-          git checkout
-          mv iPhoneOS16.5.sdk $THEOS/sdks/
-          rm -rf $THEOS/sdks-tmp
-          curl -sLo $THEOS/include/roothide.h https://raw.githubusercontent.com/RootHide/roothide-theos/master/include/roothide.h
-
-      - name: Compile Rootless Package
-        run: |
-          make package SCHEME=rootless FINALPACKAGE=1
-
-      - name: Upload Output Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ActionGesture-Rootless-Linux
+          name: ActionGesture-Rootless-deb
           path: packages/*.deb
