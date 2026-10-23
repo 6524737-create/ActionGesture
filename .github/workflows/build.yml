@@ -12,6 +12,10 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install ldid
+        run: |
+          brew install ldid
+
       - name: Setup Theos
         run: |
           git clone --recursive https://github.com/theos/theos.git ~/theos
@@ -27,7 +31,7 @@ jobs:
           git checkout
           rm -rf .git
           
-          # 注入纯宏定义的 roothide.h，不报符号冲突
+          # 注入纯宏定义的 roothide.h
           cat << 'EOF' > ~/theos/include/roothide.h
           #pragma once
           #define jbroot(path) path
