@@ -31,10 +31,11 @@ jobs:
           git checkout
           rm -rf .git
           
-          # 注入纯宏定义的 roothide.h
+          # 让 jbroot 自动附带 /var/jb 前缀，正确识别无根路径
           cat << 'EOF' > ~/theos/include/roothide.h
           #pragma once
-          #define jbroot(path) path
+          #import <Foundation/Foundation.h>
+          #define jbroot(path) [@"/var/jb" stringByAppendingPathComponent:(path)]
           #define rootfs(path) path
           EOF
 
