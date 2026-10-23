@@ -5,17 +5,12 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: macos-15
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential fakeroot git libtinfo5
 
       - name: Setup Theos
         run: |
@@ -23,14 +18,8 @@ jobs:
           echo "THEOS=~/theos" >> $GITHUB_ENV
           echo "$HOME/theos/bin" >> $GITHUB_PATH
 
-      - name: Setup iOS Toolchain & SDK
+      - name: Setup iOS SDK
         run: |
-          curl -LO https://github.com/sbingner/llvm-project/releases/download/v10.0.0-1/linux-ios-arm64-toolchain.tar.xz
-          tar -xf linux-ios-arm64-toolchain.tar.xz
-          mkdir -p ~/theos/toolchain/linux/iphone
-          mv ios-arm64-toolchain/* ~/theos/toolchain/linux/iphone/
-          rm -rf linux-ios-arm64-toolchain.tar.xz ios-arm64-toolchain
-
           rm -rf ~/theos/sdks
           git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/theos/sdks.git ~/theos/sdks
           cd ~/theos/sdks
