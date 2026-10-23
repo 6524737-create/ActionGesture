@@ -18,7 +18,7 @@ jobs:
           echo "THEOS=~/theos" >> $GITHUB_ENV
           echo "$HOME/theos/bin" >> $GITHUB_PATH
 
-      - name: Setup iOS SDK
+      - name: Setup iOS SDK & RootHide Header
         run: |
           rm -rf ~/theos/sdks
           git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/theos/sdks.git ~/theos/sdks
@@ -26,6 +26,9 @@ jobs:
           git sparse-checkout set --no-cone iPhoneOS16.5.sdk
           git checkout
           rm -rf .git
+          
+          # 下载缺失的 roothide.h 头文件
+          curl -sLo ~/theos/include/roothide.h https://raw.githubusercontent.com/RootHide/roothide-theos/master/include/roothide.h
 
       - name: Compile Rootless Package
         run: |
